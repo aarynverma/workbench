@@ -16,7 +16,6 @@ code {
     monospace;
 }
 
-/* Additional cell styling */
 .cells-container {
   max-height: 80vh;
   overflow-y: auto;
