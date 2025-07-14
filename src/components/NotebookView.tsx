@@ -11,23 +11,20 @@ export default function NotebookView() {
   const notebook = useWorkbenchStore(s =>
     s.notebooks.find(nb => nb.id === selectedId)
   );
-  const setNotebookMeta = useWorkbenchStore(s => s.updateNotebookMeta); // We'll add this action if missing
+  const setNotebookMeta = useWorkbenchStore(s => s.updateNotebookMeta);
   const addCell = useWorkbenchStore(s => s.addCell);
 
   useEffect(() => {
     const setupNotebookAndKernel = async () => {
       if (!notebook) return;
-      // Only create if not already set
       if (!notebook.notebookPath) {
         const nbName = notebook.name ? `${notebook.name}.ipynb` : `Untitled.ipynb`;
         const nbRes = await createJupyterHubNotebook(JUPYTERHUB_TOKEN, nbName);
         const nbPath = nbRes.path;
         setNotebookMeta(notebook.id, { notebookPath: nbPath });
-        // Start kernel
         const kernelRes = await startJupyterHubKernel(JUPYTERHUB_TOKEN, nbPath);
         setNotebookMeta(notebook.id, { kernelId: kernelRes.id });
       } else if (!notebook.kernelId) {
-        // If notebookPath exists but no kernel, start kernel
         const kernelRes = await startJupyterHubKernel(JUPYTERHUB_TOKEN, notebook.notebookPath);
         setNotebookMeta(notebook.id, { kernelId: kernelRes.id });
       }

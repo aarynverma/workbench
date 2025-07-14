@@ -25,7 +25,6 @@ export default function CellItem({ notebookId, cell, dragHandleProps, notebookPa
   const deleteCell = useWorkbenchStore((s: any) => s.deleteCell);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
-  const [executingMsgId, setExecutingMsgId] = useState<string | null>(null);
 
   const handleRun = async () => {
     if (!notebookPath || !kernelId) {
@@ -57,7 +56,6 @@ export default function CellItem({ notebookId, cell, dragHandleProps, notebookPa
     });
     ws.onopen = () => {
       const session = uuidv4();
-      setExecutingMsgId(session);
       const username = 'admin';
       console.log("WebSocket opened, sending execute request:", cell.code);
       executeJupyterHubCell(ws, cell.code, username, session);
