@@ -78,18 +78,22 @@ const CellList: React.FC<CellListProps> = ({ notebook, token }) => {
   return (
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={cells.map(c => c.id)} strategy={verticalListSortingStrategy}>
-        <div>
-          {cells.map((cell, idx) => (
-            <SortableCellItem
-              key={cell.id}
-              cell={cell}
-              notebookId={notebookId}
-              notebookPath={notebookPath}
-              kernelId={kernelId}
-              cellIndex={idx}
-              token={token}
-            />
-          ))}
+        <div className="cells-container">
+          {cells.length > 0 ? (
+            cells.map((cell, idx) => (
+              <SortableCellItem
+                key={cell.id}
+                cell={cell}
+                notebookId={notebookId}
+                notebookPath={notebookPath}
+                kernelId={kernelId}
+                cellIndex={idx}
+                token={token}
+              />
+            ))
+          ) : (
+            <div className="p-4 text-gray-500">No cells yet. Add one to get started.</div>
+          )}
         </div>
       </SortableContext>
     </DndContext>

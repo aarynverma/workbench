@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useWorkbenchStore } from '../store/workbenchStore';
 import { updateJupyterHubCell, connectJupyterHubKernelWebSocket, executeJupyterHubCell } from '../utils/jupyterApi';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,6 +25,12 @@ export default function CellItem({ notebookId, cell, dragHandleProps, notebookPa
   const deleteCell = useWorkbenchStore((s: any) => s.deleteCell);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Memoize the onChange handler to prevent recreating it on every render
+  const handleCodeChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateCell(notebookId, cell.id, { code: e.target.value });
+  }, [notebookId, cell.id, updateCell]);
 
   const handleRun = async () => {
     if (!notebookPath || !kernelId) {
@@ -83,11 +89,11 @@ export default function CellItem({ notebookId, cell, dragHandleProps, notebookPa
         <span className="font-semibold text-gray-700">Cell</span>
       </div>
       <textarea
+        ref={textareaRef}
         className="w-full h-24 border p-2"
         value={cell.code}
-        onChange={e =>
-          updateCell(notebookId, cell.id, { code: e.target.value })
-        }
+        onChange={handleCodeChange}
+        data-cell-id={cell.id}
       />
       <div className="mt-2 flex space-x-2">
         <button
