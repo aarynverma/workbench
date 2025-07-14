@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useWorkbenchStore } from '../store/workbenchStore';
-
-import { useState } from 'react';
-import { updateCell as updateJupyterCell, connectKernelWebSocket, executeCell } from '../utils/jupyterApi';
+import { updateJupyterHubCell, connectJupyterHubKernelWebSocket, executeJupyterHubCell } from '../utils/jupyterApi';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CellItemProps {
   notebookId: string;
@@ -16,39 +15,53 @@ interface CellItemProps {
   notebookPath: string;
   kernelId: string;
   cellIndex: number;
+  token: string;
 }
 
 
-export default function CellItem({ notebookId, cell, dragHandleProps, notebookPath, kernelId, cellIndex }: CellItemProps) {
-  const updateCell = useWorkbenchStore(s => s.updateCell);
-  const deleteCell = useWorkbenchStore(s => s.deleteCell);
+export default function CellItem({ notebookId, cell, dragHandleProps, notebookPath, kernelId, cellIndex, token }: CellItemProps) {
+  console.log('Running cell with kernelId:', kernelId, 'notebookPath:', notebookPath);
+  const updateCell = useWorkbenchStore((s: any) => s.updateCell);
+  const deleteCell = useWorkbenchStore((s: any) => s.deleteCell);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
+  const [executingMsgId, setExecutingMsgId] = useState<string | null>(null);
 
   const handleRun = async () => {
+    if (!notebookPath || !kernelId) {
+      alert('Notebook or kernel is not ready. Please try again.');
+      setIsRunning(false);
+      return;
+    }
     setIsRunning(true);
     setOutput('');
-    // 1. Update cell code in Jupyter notebook
-    await updateJupyterCell(notebookPath, cellIndex, cell.code);
-    // 2. Connect to kernel WebSocket
-    const ws = connectKernelWebSocket(kernelId, (msg) => {
-      // 3. Stream output
-      if (msg.msg_type === 'stream' && msg.content?.text) {
+    await updateJupyterHubCell(token, notebookPath, cellIndex, cell.code);
+    const ws = connectJupyterHubKernelWebSocket(kernelId, token, (msg) => {
+      console.log("WS message:", msg);
+      const msgType = msg.header?.msg_type;
+      if (msgType === 'stream' && msg.content?.text) {
         setOutput(prev => prev + msg.content.text);
-      }
-      if (msg.msg_type === 'execute_result' && msg.content?.data) {
-        setOutput(prev => prev + (msg.content.data['text/plain'] || ''));
-      }
-      if (msg.msg_type === 'error' && msg.content?.evalue) {
-        setOutput(prev => prev + '\nError: ' + msg.content.evalue);
-      }
-      if (msg.msg_type === 'status' && msg.content?.execution_state === 'idle') {
         ws.close();
         setIsRunning(false);
       }
+      if (msgType === 'execute_result' && msg.content?.data) {
+        setOutput(prev => prev + (msg.content.data['text/plain'] || ''));
+        setIsRunning(false);
+        ws.close();
+      }
+      if (msgType === 'error' && msg.content?.evalue) {
+        setOutput(prev => prev + '\nError: ' + msg.content.evalue);
+        setIsRunning(false);
+        ws.close();
+      }
     });
-    // 4. Execute cell
-    executeCell(ws, cell.code, cellIndex);
+    ws.onopen = () => {
+      const session = uuidv4();
+      setExecutingMsgId(session);
+      const username = 'admin';
+      console.log("WebSocket opened, sending execute request:", cell.code);
+      executeJupyterHubCell(ws, cell.code, username, session);
+    };
   };
 
   return (

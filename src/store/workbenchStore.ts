@@ -33,9 +33,16 @@ interface WorkbenchState {
   ) => void;
   deleteCell: (notebookId: string, cellId: string) => void;
   reorderCells: (notebookId: string, newOrder: string[]) => void;
+  updateNotebookMeta: (notebookId: string, meta: Partial<Notebook>) => void;
 }
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
+  updateNotebookMeta: (notebookId, meta) =>
+    set((state) => ({
+      notebooks: state.notebooks.map((nb) =>
+        nb.id === notebookId ? { ...nb, ...meta } : nb
+      ),
+    })),
   notebooks: [],
   selectedNotebookId: null,
 

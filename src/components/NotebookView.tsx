@@ -1,14 +1,40 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useWorkbenchStore } from '../store/workbenchStore';
 import CellList from './CellList';
+import { createJupyterHubNotebook, startJupyterHubKernel } from '../utils/jupyterApi';
+
+const JUPYTERHUB_TOKEN = "f89d68d1fdd54ce48fff0bb3d629b5e6";
 
 export default function NotebookView() {
+
   const selectedId = useWorkbenchStore(s => s.selectedNotebookId);
   const notebook = useWorkbenchStore(s =>
     s.notebooks.find(nb => nb.id === selectedId)
   );
-
+  const setNotebookMeta = useWorkbenchStore(s => s.updateNotebookMeta); // We'll add this action if missing
   const addCell = useWorkbenchStore(s => s.addCell);
+
+  useEffect(() => {
+    const setupNotebookAndKernel = async () => {
+      if (!notebook) return;
+      // Only create if not already set
+      if (!notebook.notebookPath) {
+        const nbName = notebook.name ? `${notebook.name}.ipynb` : `Untitled.ipynb`;
+        const nbRes = await createJupyterHubNotebook(JUPYTERHUB_TOKEN, nbName);
+        const nbPath = nbRes.path;
+        setNotebookMeta(notebook.id, { notebookPath: nbPath });
+        // Start kernel
+        const kernelRes = await startJupyterHubKernel(JUPYTERHUB_TOKEN, nbPath);
+        setNotebookMeta(notebook.id, { kernelId: kernelRes.id });
+      } else if (!notebook.kernelId) {
+        // If notebookPath exists but no kernel, start kernel
+        const kernelRes = await startJupyterHubKernel(JUPYTERHUB_TOKEN, notebook.notebookPath);
+        setNotebookMeta(notebook.id, { kernelId: kernelRes.id });
+      }
+    };
+    setupNotebookAndKernel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notebook?.id]);
 
   if (!notebook) {
     return <div className="flex-1 flex items-center justify-center">No notebook selected</div>;
@@ -29,6 +55,7 @@ export default function NotebookView() {
           notebookPath: notebook.notebookPath || '',
           kernelId: notebook.kernelId || '',
         }}
+        token={JUPYTERHUB_TOKEN}
       />
     </div>
   );

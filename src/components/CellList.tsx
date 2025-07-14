@@ -13,15 +13,17 @@ interface CellListProps {
     notebookPath: string;
     kernelId: string;
   };
+  token: string;
 }
 
 
-function SortableCellItem({ cell, notebookId, notebookPath, kernelId, cellIndex }: {
+function SortableCellItem({ cell, notebookId, notebookPath, kernelId, cellIndex, token }: {
   cell: any;
   notebookId: string;
   notebookPath: string;
   kernelId: string;
   cellIndex: number;
+  token: string;
 }) {
   const {
     attributes,
@@ -39,7 +41,6 @@ function SortableCellItem({ cell, notebookId, notebookPath, kernelId, cellIndex 
     zIndex: isDragging ? 10 : 'auto',
   };
 
-  // Only pass drag listeners/attributes to the drag handle
   const dragHandleProps = {
     ...attributes,
     ...listeners,
@@ -54,12 +55,13 @@ function SortableCellItem({ cell, notebookId, notebookPath, kernelId, cellIndex 
         notebookPath={notebookPath}
         kernelId={kernelId}
         cellIndex={cellIndex}
+        token={token}
       />
     </div>
   );
 }
 
-const CellList: React.FC<CellListProps> = ({ notebook }) => {
+const CellList: React.FC<CellListProps> = ({ notebook, token }) => {
   const { cells, id: notebookId, notebookPath, kernelId } = notebook;
   const reorderCells = useWorkbenchStore(s => s.reorderCells);
 
@@ -85,6 +87,7 @@ const CellList: React.FC<CellListProps> = ({ notebook }) => {
               notebookPath={notebookPath}
               kernelId={kernelId}
               cellIndex={idx}
+              token={token}
             />
           ))}
         </div>
